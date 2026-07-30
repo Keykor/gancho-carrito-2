@@ -8,7 +8,7 @@ import { almacen } from './config.js';
 
 export const STRINGS = {
 es: {
-  'titulo.bajada'          : 'Cinco minas. Una mina. Dos minutos.',
+  'titulo.bajada'          : 'Cinco minas en una mina. Y solo dos minutos.',
   'titulo.jugar'           : 'Bajar a la mina',
   'titulo.tutorial'        : 'Cómo se juega',
   'titulo.ayuda'           : 'Guía',
