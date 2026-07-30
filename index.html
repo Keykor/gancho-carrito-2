@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Gancho Carrito 2: Cosas de Minas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230B0A12'/%3E%3Cpath d='M2 5c4-2 8-2 12 0' stroke='%238A7FA8' stroke-width='2' fill='none'/%3E%3Crect x='7' y='4' width='2' height='9' fill='%23C79A45'/%3E%3Crect x='5' y='12' width='6' height='2' fill='%23FFD166'/%3E%3C/svg%3E">
+<style>
+:root{
+  --roca-fondo:#0B0A12;
+  --roca-pared:#241F35;
+  --luz-casco:#FFD166;
+  --gema:#4CE0D2;
+  --peligro:#FF3D5A;
+  --polvo:#8A7FA8;
+  --display:Oswald,'Arial Narrow',Impact,sans-serif;
+  --sans:'Helvetica Neue',Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#fff;
+  font-family:var(--sans);-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;touch-action:none}
+body{display:flex;align-items:center;justify-content:center}
+
+/* El stage es la caja 4:3 con letterbox. font-size lo setea el JS a alto/240*8,
+   asi todo el HUD se dimensiona en em y escala con la resolucion interna. */
+#stage{position:relative;overflow:hidden;background:var(--roca-fondo);font-size:8px}
+#gl{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+
+.layer{position:absolute;inset:0;pointer-events:none}
+.hide{display:none!important}
+
+/* ---------- HUD ---------- */
+#hud{font-family:var(--display);text-transform:uppercase;letter-spacing:.04em}
+#hud .corner{position:absolute;display:flex;align-items:center;gap:.5em}
+#hud .tl{top:.75em;left:.9em}
+#hud .tr{top:.75em;right:.9em;flex-direction:column;align-items:flex-end;gap:.15em}
+#hud .bl{bottom:.75em;left:.9em}
+#hud .br{bottom:.75em;right:.9em}
+
+#reloj{font-size:2.6em;font-weight:700;font-variant-numeric:tabular-nums;
+  color:#fff;text-shadow:0 .12em 0 rgba(0,0,0,.85);line-height:1}
+#reloj.urgente{color:var(--peligro);animation:pulso .5s steps(2,end) infinite}
+@keyframes pulso{50%{opacity:.35}}
+
+#gemas{display:flex;align-items:center;gap:.3em;font-size:2.2em;font-weight:700;
+  color:var(--gema);text-shadow:0 .12em 0 rgba(0,0,0,.85);line-height:1;
+  font-variant-numeric:tabular-nums}
+#gemas .rombo{width:.62em;height:.62em;background:var(--gema);transform:rotate(45deg)}
+#racha{font-size:1.35em;font-weight:700;color:var(--luz-casco);opacity:0;
+  text-shadow:0 .1em 0 rgba(0,0,0,.85);transition:opacity .15s;line-height:1}
+#racha.on{opacity:1}
+#racha.crece{animation:rachaPop .22s ease-out}
+@keyframes rachaPop{0%{transform:scale(1)}45%{transform:scale(1.45)}100%{transform:scale(1)}}
+
+#vidas{display:flex;gap:.35em;align-items:center}
+.casco{width:1.9em;height:1.9em;opacity:1;transition:opacity .2s,filter .2s}
+.casco.gastado{opacity:.28;filter:grayscale(1) brightness(.5)}
+#escudo{width:1.5em;height:1.5em;margin-left:.3em;opacity:0;transition:opacity .2s}
+#escudo.on{opacity:1}
+#escudo.recargando{opacity:.25}
+
+#companieras{display:flex;gap:.4em}
+.retrato{width:2.4em;height:2.4em;border:.14em solid rgba(138,127,168,.4);
+  border-radius:.2em;background:#15121f;position:relative;overflow:hidden;
+  filter:grayscale(1) brightness(.35);transition:filter .3s,border-color .3s}
+.retrato.rescatada{filter:none;border-color:var(--luz-casco)}
+.retrato canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+
+/* Indicadores de borde superior */
+/* debajo del cronometro y del contador: el centro es zona de juego */
+#avisos{position:absolute;top:3.9em;left:0;right:0;height:3.4em}
+.aviso{position:absolute;top:.3em;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:.1em;
+  font-family:var(--display);font-size:1.1em;font-weight:700;white-space:nowrap}
+.aviso .punta{width:0;height:0;border-left:.55em solid transparent;
+  border-right:.55em solid transparent;border-top:.7em solid currentColor}
+.aviso .cara{width:2.1em;height:2.1em;image-rendering:pixelated;
+  border:.14em solid currentColor;border-radius:.15em;background:#15121f}
+.aviso .txt{font-size:.95em}
+.aviso.desvio{color:var(--luz-casco);font-size:1.9em}
+.aviso.desvio .txt{font-size:1em}
+.aviso.comp{color:var(--luz-casco);animation:pulso .45s steps(2,end) infinite}
+.aviso.viga{color:var(--peligro);animation:pulso .3s steps(2,end) infinite}
+
+/* Reticula del gancho */
+#reticula{position:absolute;left:0;top:0;width:5em;height:5em;
+  margin-left:-2.5em;margin-top:-2.5em;pointer-events:none;
+  transition:transform .07s ease-out}
+#reticula svg{width:100%;height:100%;display:block;overflow:visible}
+#reticula .forma{fill:none;stroke-width:2.4;stroke-linecap:square;vector-effect:non-scaling-stroke}
+#reticula .arco{fill:none;stroke:#fff;stroke-width:2.6;opacity:.9;vector-effect:non-scaling-stroke}
+#reticula.oculta{opacity:0}
+
+/* Cartel de ayuda contextual */
+/* Ficha de rescate: quien es y que deja. La habilidad es permanente y cambia
+   como se juega el resto de la partida, asi que tiene que decirse en el
+   momento — estaba solo en un tooltip de los retratos, que en tactil no existe. */
+#ficha{position:absolute;left:50%;top:56%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:.7em;white-space:nowrap;
+  background:rgba(11,10,18,.88);border:.11em solid var(--luz-casco);
+  border-radius:.2em;padding:.5em .8em;opacity:0;transition:opacity .2s}
+#ficha.on{opacity:1}
+#ficha canvas{width:2.8em;height:2.8em;image-rendering:pixelated;border-radius:.15em}
+#ficha div{display:flex;flex-direction:column;align-items:flex-start;gap:.1em;text-align:left}
+#ficha b{font-family:var(--display);font-size:1.6em;font-weight:700;color:var(--luz-casco);
+  text-transform:uppercase;letter-spacing:.04em;line-height:1}
+#ficha span{font-size:1.15em;color:#E8E4F0;line-height:1.2}
+
+#hint{position:absolute;left:50%;top:62%;transform:translateX(-50%);
+  font-family:var(--display);font-size:2.2em;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--luz-casco);text-shadow:0 .12em 0 rgba(0,0,0,.9);
+  opacity:0;transition:opacity .2s;white-space:nowrap}
+#hint.on{opacity:1}
+
+/* Marcador de tramo / mensaje de tutorial */
+/* El cartel del tutorial: con caja propia, para que no compita con la roca */
+#beat{position:absolute;left:50%;bottom:13%;transform:translateX(-50%);
+  max-width:86%;text-align:center;font-family:var(--display);font-size:1.85em;
+  font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#fff;
+  background:rgba(11,10,18,.82);border:.1em solid var(--roca-pared);
+  border-radius:.2em;padding:.45em 1.1em;line-height:1.2;
+  opacity:0;transition:opacity .25s,transform .25s}
+#beat.on{opacity:1}
+
+/* ---------- Pantallas ---------- */
+.pantalla{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;gap:1.2em;pointer-events:auto;
+  background:rgba(11,10,18,.93);padding:1.6em;text-align:center;
+  overflow-y:auto;overscroll-behavior:contain;
+  /* "safe center" y no "center": con center pelado, el contenido que se
+     desborda se corta arriba Y abajo y no hay forma de scrollear hasta el.
+     Por eso el boton de volver quedaba afuera y era inalcanzable. */
+  justify-content:safe center}
+.pantalla > *{flex-shrink:0}
+/* Pegado abajo: la pantalla de controles crece con el idioma y con cuantas
+   habilidades haya, y el boton de salir no puede depender de que todo entre. */
+.pantalla .pegado{position:sticky;bottom:0;margin-top:auto;z-index:2}
+/* margenes automaticos: centran cuando sobra lugar, no empujan cuando falta */
+.pantalla::before,.pantalla::after{content:'';margin:auto;flex:0 0 0}
+
+/* Ventanas bajas (celular apaisado, monitores partidos): todo mas compacto */
+@media (max-height:520px){
+  .pantalla{gap:.7em;padding:1em}
+  .titulo-juego .l1{font-size:3.4em}
+  .titulo-juego .l2{font-size:2.2em}
+  h2.titulo-pantalla{font-size:2.4em}
+  #final-titulo{font-size:3em}
+  .btn{font-size:1.7em;padding:.35em 1.1em}
+  #ayuda-cuerpo{gap:.55em}
+  #ayuda-cuerpo .intro{font-size:1.1em}
+  .controles{gap:.3em}
+  .ctrl dt{font-size:1.05em}
+  .ctrl dd{font-size:.98em}
+  .ctrl{grid-template-columns:1.7em 8.5em 1fr}
+  .ctrl .ico{width:1.7em;height:1.7em}
+  #final-stats{gap:1.3em}
+  #final-stats .n{font-size:2.1em}
+}
+.pantalla.transp{background:rgba(11,10,18,.82)}
+
+.titulo-juego{font-family:var(--display);font-weight:700;line-height:.92;
+  text-transform:uppercase;letter-spacing:.02em}
+.titulo-juego .l1{display:block;font-size:4.6em;color:#fff;
+  text-shadow:.055em .075em 0 #120F1E}
+.titulo-juego .l2{display:block;font-size:2.9em;color:var(--luz-casco);margin-top:.1em}
+.bajada{font-size:1.5em;color:var(--polvo);letter-spacing:.06em;text-transform:uppercase;
+  font-family:var(--display)}
+
+h2.titulo-pantalla{font-family:var(--display);font-size:3.4em;font-weight:700;
+  text-transform:uppercase;letter-spacing:.03em;color:var(--luz-casco);line-height:1}
+
+.btn{font-family:var(--display);font-size:2.1em;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--roca-fondo);background:var(--luz-casco);
+  border:none;border-radius:.12em;padding:.42em 1.4em;cursor:pointer;
+  pointer-events:auto;transition:transform .08s,filter .12s;min-width:7em}
+.btn:hover{filter:brightness(1.12)}
+.btn:active{transform:translateY(.06em)}
+.btn.sec{background:transparent;color:var(--polvo);
+  box-shadow:inset 0 0 0 .12em var(--polvo);min-width:0;font-size:1.6em}
+.btn.sec:hover{color:#fff;box-shadow:inset 0 0 0 .12em #fff}
+.btn.link{background:none;color:var(--polvo);box-shadow:none;font-size:1.5em;
+  text-decoration:underline;min-width:0;padding:.3em}
+.btn.link:hover{color:#fff}
+.fila{display:flex;gap:.8em;align-items:center;justify-content:center;flex-wrap:wrap}
+
+/* Selector de idioma */
+.idioma{display:flex;gap:.35em}
+.idioma button{font-family:var(--display);font-size:1.4em;font-weight:700;
+  text-transform:uppercase;padding:.25em .9em;border:none;cursor:pointer;
+  pointer-events:auto;background:transparent;color:var(--polvo);
+  box-shadow:inset 0 0 0 .12em var(--polvo);border-radius:.12em}
+.idioma button.activo{background:var(--polvo);color:var(--roca-fondo)}
+
+/* Sliders de audio */
+.mezcla{display:flex;flex-direction:column;gap:.55em;width:min(26em,80%)}
+.slider-fila{display:flex;align-items:center;gap:.8em;font-family:var(--display);
+  font-size:1.4em;text-transform:uppercase;letter-spacing:.05em;color:var(--polvo)}
+.slider-fila label{flex:0 0 7em;text-align:left}
+.slider-fila input{flex:1;pointer-events:auto;-webkit-appearance:none;appearance:none;
+  height:.5em;background:var(--roca-pared);border-radius:.25em;outline:none}
+.slider-fila input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:1.2em;height:1.2em;background:var(--luz-casco);border-radius:50%;cursor:pointer}
+.slider-fila input::-moz-range-thumb{width:1.2em;height:1.2em;background:var(--luz-casco);
+  border:none;border-radius:50%;cursor:pointer}
+.slider-fila .val{flex:0 0 2.6em;text-align:right;font-variant-numeric:tabular-nums;color:#fff}
+
+/* Tabla de ayuda / como se juega */
+/* La guia va PAGINADA, no apretada. Meter los controles y las cuatro mineras
+   en una sola pantalla obligaba a scrollear o a achicar la letra hasta que no
+   se leia; con dos paginas cada una entra sobrada. */
+#ayuda-cuerpo{max-width:42em;width:100%;text-align:left;color:var(--polvo);
+  display:grid;grid-template-columns:2.4em 1fr 2.4em;align-items:center;gap:0 .6em}
+.paginas{grid-column:2;display:flex;flex-direction:column;gap:.7em}
+.pagina{display:none;flex-direction:column;gap:.7em}
+.pagina.activa{display:flex}
+.flecha{grid-row:1;background:none;border:none;padding:0;cursor:pointer;
+  pointer-events:auto;color:var(--polvo);opacity:.55;transition:opacity .15s}
+.flecha:hover{opacity:1}
+.flecha[disabled]{opacity:.12;cursor:default}
+.flecha svg{width:2.4em;height:2.4em;display:block}
+.flecha.izq{grid-column:1}
+.flecha.der{grid-column:3}
+.puntos{grid-column:2;display:flex;justify-content:center;gap:.5em;margin-top:.3em}
+.puntos i{width:.6em;height:.6em;border-radius:50%;background:var(--roca-pared)}
+.puntos i.on{background:var(--luz-casco)}
+#ayuda-cuerpo .intro{font-size:1.2em;line-height:1.3;color:#E8E4F0;text-align:center}
+#ayuda-cuerpo .cierre{font-size:1.1em;line-height:1.3;text-align:center;
+  border-top:.12em solid var(--roca-pared);padding-top:.6em}
+#ayuda-cuerpo .tecla{font-family:var(--display);font-size:1.05em;text-align:center;
+  text-transform:uppercase;letter-spacing:.07em;opacity:.7}
+.controles{display:flex;flex-direction:column;gap:.3em}
+/* Una sola fila por control: icono | accion | resultado. En dos filas cada
+   control ocupaba el doble de alto y la pantalla no entraba. */
+.ctrl{display:grid;grid-template-columns:1.9em 8.6em 1fr;column-gap:.65em;
+  align-items:center}
+.ctrl .ico{width:1.9em;height:1.9em}
+.ctrl .ico svg{width:100%;height:100%;display:block;overflow:visible}
+.ctrl dt{font-family:var(--display);font-size:1.1em;font-weight:700;color:#fff;
+  text-transform:uppercase;letter-spacing:.03em;line-height:1.15}
+.ctrl dd{font-size:1.02em;line-height:1.25;color:var(--polvo)}
+@media (max-width:620px){
+  .ctrl{grid-template-columns:1.9em 1fr;grid-template-rows:auto auto;row-gap:.1em}
+  .ctrl .ico{grid-row:1 / span 2}
+  .hab{grid-template-columns:1.7em 1fr;grid-template-rows:auto auto;row-gap:.05em}
+  .hab canvas{grid-row:1 / span 2}
+}
+
+/* Las cuatro habilidades, escritas. Son permanentes y cambian como se juega el
+   resto de la partida: no pueden vivir solo en un tooltip. */
+#ayuda-cuerpo .compsT{font-size:1.05em;line-height:1.3;text-align:center;
+  border-top:.12em solid var(--roca-pared);padding-top:.6em}
+.habs{display:flex;flex-direction:column;gap:.22em}
+.hab{display:grid;grid-template-columns:1.6em 5.8em 1fr;column-gap:.6em;align-items:center}
+.hab canvas{width:1.6em;height:1.6em;image-rendering:pixelated;border-radius:.15em;
+  border:.1em solid var(--roca-pared)}
+.hab b{font-family:var(--display);font-size:1.05em;font-weight:700;
+  color:var(--luz-casco);text-transform:uppercase;letter-spacing:.03em}
+.hab span{font-size:.98em;line-height:1.25;color:var(--polvo)}
+
+/* ---------- Pantalla final ---------- */
+#final-titulo{font-family:var(--display);font-size:4.4em;font-weight:700;
+  text-transform:uppercase;letter-spacing:.02em;line-height:1;color:var(--luz-casco)}
+#final-cierre{font-size:1.55em;line-height:1.5;color:var(--polvo);max-width:30em}
+#final-stats{display:flex;gap:2.2em;font-family:var(--display);flex-wrap:wrap;
+  justify-content:center}
+#final-stats .stat{display:flex;flex-direction:column;align-items:center;gap:.1em}
+#final-stats .n{font-size:2.8em;font-weight:700;color:#fff;line-height:1;
+  font-variant-numeric:tabular-nums}
+#final-stats .n.oro{color:var(--luz-casco)}
+#final-stats .et{font-size:1.15em;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--polvo)}
+#final-retratos{display:flex;gap:.5em}
+#final-finales{display:flex;flex-direction:column;gap:.3em;font-family:var(--display);
+  font-size:1.25em;text-transform:uppercase;letter-spacing:.04em;align-items:stretch}
+#final-finales .f{display:grid;grid-template-columns:1.5em 1fr;align-items:center;
+  gap:.6em;color:var(--roca-pared);text-align:left}
+#final-finales .f .caja{width:1.15em;height:1.15em;border:.14em solid currentColor;
+  border-radius:.12em;position:relative}
+/* el tilde se dibuja con dos trazos y se "escribe" al aparecer */
+#final-finales .f .caja::after{content:'';position:absolute;left:22%;top:8%;
+  width:38%;height:70%;border:solid currentColor;border-width:0 .16em .16em 0;
+  transform:rotate(42deg) scale(0);transform-origin:center;opacity:0}
+#final-finales .f.logrado{color:var(--gema)}
+#final-finales .f.logrado .caja::after{transform:rotate(42deg) scale(1);opacity:1}
+#final-finales .f.actual{color:var(--luz-casco)}
+/* La silueta tiene que verse lo suficiente para saber que AHI HAY un final:
+   una fila vacia no da ganas de nada. */
+/* La pista: aparece despues de la lista, con la casilla ya tildada a la vista.
+   Sin esto la lista de siluetas dice QUE falta pero no COMO. */
+/* Una linea. Antes eran tres renglones explicando el final y a esa altura de
+   la pantalla ya nadie lee: lo que sirve es una sola cosa para probar. */
+#final-pista{display:flex;align-items:baseline;justify-content:center;gap:.6em;
+  padding:.45em 1em;border-radius:.2em;white-space:nowrap;
+  background:rgba(76,224,210,.07);border:.1em solid rgba(76,224,210,.32);
+  animation:pistaEntra .45s 1.0s ease-out both}
+#final-pista b{font-family:var(--display);font-size:1.1em;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--gema)}
+#final-pista span{font-family:var(--display);font-size:1.55em;font-weight:700;
+  text-transform:uppercase;letter-spacing:.03em;color:#fff}
+@keyframes pistaEntra{from{opacity:0;transform:translateY(.6em)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#final-pista{animation:none}}
+
+#final-finales .f.silueta{color:#4A4066}
+#final-finales .f.silueta .txt{color:#4A4066;letter-spacing:.3em}
+/* el que acabas de conseguir se tilda a la vista, con un golpe de escala */
+#final-finales .f.nuevo .caja::after{animation:tildar .45s .55s ease-out both}
+#final-finales .f.nuevo{animation:destacar .5s .55s ease-out both}
+@keyframes tildar{
+  0%{transform:rotate(42deg) scale(0);opacity:0}
+  60%{transform:rotate(42deg) scale(1.35);opacity:1}
+  100%{transform:rotate(42deg) scale(1);opacity:1}}
+@keyframes destacar{
+  0%{color:var(--polvo)}
+  40%{color:#fff}
+  100%{color:var(--luz-casco)}}
+@media (prefers-reduced-motion:reduce){
+  #final-finales .f.nuevo .caja::after,#final-finales .f.nuevo{animation:none}
+  #final-finales .f.nuevo .caja::after{transform:rotate(42deg) scale(1);opacity:1}
+}
+
+/* ---------- Overlays de debug ---------- */
+#stats{position:absolute;top:.5em;left:50%;transform:translateX(-50%);
+  font-family:ui-monospace,Menlo,monospace;font-size:1.1em;line-height:1.35;
+  color:#7CFF9E;background:rgba(0,0,0,.72);padding:.4em .6em;white-space:pre;
+  text-align:left;pointer-events:none}
+#debug2d{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* ---------- Cartel de error / audio ---------- */
+/* El juego es 4:3 apaisado por diseño (§17.6): una camara third-person en un
+   tunel necesita ancho. En vertical el canvas entra pero queda tan chico que
+   no se puede apuntar, asi que se pide girar en vez de rediseñar el HUD. */
+#girar{position:fixed;inset:0;z-index:50;display:flex;align-items:center;
+  justify-content:center;background:var(--roca-fondo);padding:2em;text-align:center}
+#girar .caja{max-width:22em;display:flex;flex-direction:column;align-items:center;gap:1.2em}
+#girar svg{width:6em;height:6em}
+#girar h1{font-family:var(--display);font-size:2.2em;color:var(--luz-casco);
+  text-transform:uppercase;letter-spacing:.04em;line-height:1.1}
+#girar p{font-size:1.5em;line-height:1.5;color:var(--polvo)}
+
+#fatal{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--roca-fondo);padding:2em;text-align:center;pointer-events:auto}
+#fatal .caja{max-width:34em;display:flex;flex-direction:column;gap:1em}
+#fatal h1{font-family:var(--display);font-size:3em;color:var(--peligro);
+  text-transform:uppercase}
+#fatal p{font-size:1.5em;line-height:1.5;color:var(--polvo)}
+
+#audio-aviso{position:absolute;bottom:1em;left:50%;transform:translateX(-50%);
+  font-family:var(--display);font-size:1.3em;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--roca-fondo);background:var(--luz-casco);padding:.35em 1em;border-radius:.15em;
+  pointer-events:auto;cursor:pointer}
+
+/* Pausa: boton de verdad, no un cartel. Con el dedo no hay teclado, asi que
+   tiene que poder tocarse; Esc queda como atajo opcional para quien juegue con
+   mouse. Va con area tactil mas grande que el icono. */
+#b-pausa{position:absolute;top:.7em;left:50%;transform:translateX(-50%);
+  width:3.4em;height:3.4em;padding:.7em;background:none;border:none;
+  pointer-events:auto;cursor:pointer;opacity:.45;transition:opacity .15s}
+#b-pausa:hover,#b-pausa:active{opacity:1}
+#b-pausa svg{width:100%;height:100%;display:block}
+
+@media (prefers-reduced-motion:reduce){
+  #reloj.urgente,.aviso.comp,.aviso.viga{animation:none}
+  #racha.crece{animation:none}
+  #reticula{transition:none}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl"></canvas>
+
+  <!-- HUD -->
+  <div class="layer" id="hud">
+    <div class="corner tl"><div id="reloj">2:00</div></div>
+    <div class="corner tr">
+      <div id="gemas"><span class="rombo"></span><span id="gemas-n">0</span></div>
+      <div id="racha"></div>
+    </div>
+    <div class="corner bl"><div id="vidas"></div><div id="escudo"></div></div>
+    <div class="corner br"><div id="companieras"></div></div>
+    <div id="avisos"></div>
+    <div id="reticula"><svg viewBox="0 0 40 40"><g id="ret-forma"></g><path class="arco" id="ret-arco"></path></svg></div>
+    <div id="hint"></div>
+    <div id="ficha" class="hide"><canvas></canvas><div><b></b><span></span></div></div>
+    <div id="beat"></div>
+    <button id="b-pausa" class="hide" aria-label="Pausa"></button>
+  </div>
+
+  <canvas class="layer" id="debug2d"></canvas>
+  <div id="stats" class="layer hide"></div>
+
+  <!-- Pantallas -->
+  <div class="pantalla hide" id="p-titulo">
+    <div class="titulo-juego"><span class="l1">Gancho Carrito 2</span><span class="l2">Cosas de Minas</span></div>
+    <div class="bajada" id="t-bajada"></div>
+    <div class="fila"><button class="btn" id="b-jugar"></button></div>
+    <div class="fila">
+      <button class="btn sec" id="b-tutorial"></button>
+      <button class="btn link" id="b-ayuda"></button>
+      <button class="btn link" id="b-opciones"></button>
+    </div>
+    <div class="fila"><div class="idioma" id="idioma-titulo"></div></div>
+    <div class="bajada" id="t-record" style="font-size:1.25em"></div>
+  </div>
+
+  <div class="pantalla hide" id="p-ayuda">
+    <h2 class="titulo-pantalla" id="ayuda-titulo"></h2>
+    <div id="ayuda-cuerpo"></div>
+    <button class="btn" id="b-ayuda-volver"></button>
+  </div>
+
+  <div class="pantalla hide" id="p-opciones">
+    <h2 class="titulo-pantalla" id="opciones-titulo"></h2>
+    <div class="mezcla" id="mezcla-opciones"></div>
+    <div class="fila"><div class="idioma" id="idioma-opciones"></div></div>
+    <button class="btn" id="b-opciones-volver"></button>
+  </div>
+
+  <div class="pantalla transp hide" id="p-pausa">
+    <h2 class="titulo-pantalla" id="pausa-titulo"></h2>
+    <div class="mezcla" id="mezcla-pausa"></div>
+    <div class="fila"><div class="idioma" id="idioma-pausa"></div></div>
+    <div class="fila">
+      <button class="btn" id="b-seguir"></button>
+      <button class="btn sec" id="b-salir"></button>
+    </div>
+  </div>
+
+  <div class="pantalla hide" id="p-tutfin">
+    <h2 class="titulo-pantalla" id="tutfin-titulo"></h2>
+    <div class="bajada" id="tutfin-bajada"></div>
+    <div class="fila">
+      <button class="btn" id="b-tutfin-jugar"></button>
+      <button class="btn sec" id="b-tutfin-menu"></button>
+    </div>
+  </div>
+
+  <div class="pantalla hide" id="p-final">
+    <div id="final-titulo"></div>
+    <div id="final-cierre"></div>
+    <div id="final-retratos"></div>
+    <div id="final-stats"></div>
+    <div id="final-finales"></div>
+    <div id="final-pista" class="hide"></div>
+    <div class="fila">
+      <button class="btn" id="b-otra"></button>
+      <button class="btn sec" id="b-final-titulo"></button>
+    </div>
+  </div>
+
+  <div id="audio-aviso" class="hide"></div>
+  <div id="girar" class="hide"><div class="caja">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <rect x="20" y="6" width="24" height="40" rx="3" fill="none" stroke="#FFD166" stroke-width="3"/>
+      <path d="M12 52a24 24 0 0 0 40-8" fill="none" stroke="#8A7FA8" stroke-width="3"/>
+      <path d="M52 34v11h-11" fill="none" stroke="#8A7FA8" stroke-width="3"/>
+    </svg>
+    <h1></h1><p></p></div></div>
+  <div id="fatal" class="hide"><div class="caja"><h1></h1><p></p></div></div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"./three.module.js"}}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
