@@ -4,7 +4,7 @@
    el centro es zona de juego.
    Ningun texto sale hardcodeado: todo pasa por t() (§16).
    =========================================================================== */
-import { CONFIG, NCARRILES, clamp, reducedMotion } from './config.js';
+import { CONFIG, RES, NCARRILES, clamp, reducedMotion } from './config.js';
 import { t, tp, setLang, idioma, alCambiarIdioma } from './strings.js';
 import { TextureGen, TX } from './texturas.js';
 import { TIPO } from './entities.js';
@@ -12,7 +12,6 @@ import { Audio, Sfx } from './audio.js';
 import { leerRecord } from './score.js';
 
 const $ = id => document.getElementById(id);
-const [RW, RH] = CONFIG.resInterna;
 
 /* Corazones y no cascos. El §12 pedia cascos porque son diegeticos, pero
    nadie los leyo como vidas: un icono de HUD tiene que entenderse sin que te
@@ -336,7 +335,7 @@ export const HUD = {
     // la reticula vive en px de pantalla; el margen negativo del CSS la centra
     const sw = this.el['stage'].clientWidth, sh = this.el['stage'].clientHeight;
     ret.style.transform =
-      `translate(${(entrada.x / RW * sw).toFixed(1)}px, ${(entrada.y / RH * sh).toFixed(1)}px)`;
+      `translate(${(entrada.x / RES.w * sw).toFixed(1)}px, ${(entrada.y / RES.h * sh).toFixed(1)}px)`;
 
     const objetivo = vista ? vista.objetivoBajo(entrada.x, entrada.y, mundo, player.x) : null;
     const clase = objetivo
@@ -392,7 +391,7 @@ export const HUD = {
       } else cv.style.display = 'none';
       const sp = el.children[1];
       if (sp.textContent !== texto) sp.textContent = texto;
-      el.style.left = clamp(tmp.x / RW * 100, 4, 96).toFixed(1) + '%';
+      el.style.left = clamp(tmp.x / RES.w * 100, 4, 96).toFixed(1) + '%';
       el.style.display = '';
       n++;
     };
@@ -499,7 +498,7 @@ export const HUD = {
     c.clearRect(0, 0, w, h);
     const { player, mundo, vista } = ctx3;
     const p = { x:0, y:0, detras:false };
-    const punto = (X, Y, Z) => { vista.proyectar(X, Y, Z, p); return { x:p.x/RW*w, y:p.y/RH*h }; };
+    const punto = (X, Y, Z) => { vista.proyectar(X, Y, Z, p); return { x:p.x/RES.w*w, y:p.y/RES.h*h }; };
 
     // carriles
     c.strokeStyle = 'rgba(138,127,168,.35)'; c.lineWidth = 1;

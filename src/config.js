@@ -59,7 +59,16 @@ export const CONFIG = {
   ambiente: 0x38314F,            // piso de luz: sin esto no se ve una silueta
 
   // --- Render PS1 (§4.5) -----------------------------------------------
+  // El alto interno es FIJO en 240 (la vertical de la PS1) y el ancho se
+  // adapta a la pantalla entre 320 y 448. El §4.5-1 pedia 320x240 con
+  // letterbox 4:3, pero en un celular apaisado (844x390) eso deja el juego en
+  // 520 px de ancho usados de 844: dos franjas negras enormes y todo chico.
+  // Ensanchar el buffer, en cambio, MUESTRA MAS TUNEL — que es exactamente lo
+  // que el §17.6 dice que esta camara necesita — y no estira ni deforma nada:
+  // el pixel sigue siendo cuadrado y del mismo tamaño.
   resInterna: [320, 240],
+  resAnchoMin: 320,
+  resAnchoMax: 560,   // celulares 20:9 apaisados llegan a ~2.2 de proporcion
   nivelesColor: 32,              // 15 bits de color: 32 niveles por canal
   ditherFuerza: 1.0,
 
@@ -194,6 +203,11 @@ export const CONFIG = {
   // --- Debug (§17.5) ---------------------------------------------------
   debug: { hitboxes:false, invencible:false, stats:false, patronForzado:null },
 };
+
+/* Resolucion interna VIVA. Es un objeto y no dos constantes a proposito: todos
+   los modulos leen RES.w / RES.h y se enteran solos cuando cambia el tamaño de
+   la ventana. */
+export const RES = { w: CONFIG.resInterna[0], h: CONFIG.resInterna[1] };
 
 export const TICK = 1 / CONFIG.tickHz;
 export const NCARRILES = CONFIG.carrilesX.length;

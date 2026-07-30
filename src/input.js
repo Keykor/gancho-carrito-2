@@ -4,12 +4,11 @@
    la pantalla, no solo del canvas (§17.6): por eso se clampea en vez de
    descartar lo que cae en el letterbox.
    =========================================================================== */
-import { CONFIG, clamp } from './config.js';
+import { CONFIG, RES, clamp } from './config.js';
 
-const [RW, RH] = CONFIG.resInterna;
 
 export const estado = {
-  x: RW / 2, y: RH / 2,       // puntero en coordenadas internas
+  x: RES.w / 2, y: RES.h / 2,       // puntero en coordenadas internas
   hayPuntero: false,          // en touch puro la reticula solo aparece al tocar
   cola: [],
   teclas: new Set(),
@@ -26,8 +25,8 @@ function aInterno(px, py){
   stage = stage || document.getElementById('stage');
   const r = stage.getBoundingClientRect();
   return {
-    x: clamp((px - r.left) / r.width  * RW, 0, RW),
-    y: clamp((py - r.top)  / r.height * RH, 0, RH),
+    x: clamp((px - r.left) / r.width  * RES.w, 0, RES.w),
+    y: clamp((py - r.top)  / r.height * RES.h, 0, RES.h),
   };
 }
 
@@ -39,6 +38,14 @@ addEventListener('pointermove', e => {
   estado.x = p.x; estado.y = p.y;
   if (e.pointerType === 'mouse') estado.hayPuntero = true;
 }, { passive: true });
+
+/* El desbloqueo del audio se engancha a VARIOS gestos y no solo a pointerdown:
+   en algunos Safari de iOS el pointerdown no cuenta como gesto valido para
+   resumir un AudioContext, y touchend si. Cuesta nada probar con los tres. */
+for (const ev of ['touchend', 'click'])
+  addEventListener(ev, () => disparar('gesto'), { passive: true });
+// si el telefono se bloquea y vuelve, el contexto queda suspendido
+addEventListener('visibilitychange', () => { if (!document.hidden) disparar('gesto'); });
 
 addEventListener('pointerdown', e => {
   disparar('gesto');                              // desbloquea el AudioContext

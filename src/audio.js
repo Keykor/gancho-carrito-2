@@ -48,16 +48,64 @@ export const Audio = {
     this.listo = true;
   },
 
-  // §14.1: el contexto arranca suspendido hasta el primer gesto, como exige el
-  // navegador. Se llama desde cualquier pointerdown/keydown.
+  /* §14.1: el contexto arranca suspendido hasta el primer gesto, como exige el
+     navegador. En iOS ademas hay dos trampas propias:
+
+     1. El interruptor de silencio del costado del telefono apaga el WebAudio.
+        Se esquiva reproduciendo un <audio> mudo en loop: eso cambia la
+        categoria de sesion de audio a "playback" y a partir de ahi el WebAudio
+        suena aunque el telefono este en silencio. Es feo y es lo que hay.
+
+     2. El resume() tiene que salir de adentro del gesto. Por eso init() y
+        resume() se llaman sincronicos, antes de cualquier await.             */
+  _mudo: null,
+  _desbloquearIOS(){
+    // OJO: aca dentro `Audio` es ESTE objeto, no el constructor del navegador.
+    // `new Audio(url)` tira TypeError, y como asegurar() es async la excepcion
+    // se convierte en una promesa rechazada: el .then() que arranca la musica
+    // no corre nunca y el juego se queda mudo. Por eso va createElement, y por
+    // eso todo esto va adentro de un try: desbloquear el audio de iOS no puede
+    // ser capaz de romper el audio de nadie mas.
+    if (this._mudo) { this._mudo.play?.().catch(() => {}); return; }
+    try {
+    // WAV de un cuarto de segundo en silencio, armado a mano (44 bytes de
+    // cabecera + ceros): mas corto que pegar un base64 y se lee.
+    const n = 1102, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const txt = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    txt(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); txt(8, 'WAVEfmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 44100, true); v.setUint32(28, 88200, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    txt(36, 'data'); v.setUint32(40, n * 2, true);
+    const a = document.createElement('audio');
+    a.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    a.loop = true; a.volume = 0.001;
+    a.setAttribute('playsinline', '');
+    this._mudo = a;
+    a.play().catch(() => {});
+    } catch { /* sin el truco de iOS el juego suena igual en todo lo demas */ }
+  },
+
   async asegurar(){
     this.init();
+    try { this._desbloquearIOS(); } catch { /* nunca puede frenar el arranque */ }
     if (this.ctx && this.ctx.state === 'suspended'){
       try { await this.ctx.resume(); } catch { /* el usuario decide */ }
     }
     return this.ctx && this.ctx.state === 'running';
   },
   get suspendido(){ return !this.ctx || this.ctx.state !== 'running'; },
+
+  /* En pausa se suspende el CONTEXTO, no se baja el master. Bajando el volumen
+     el secuenciador seguia corriendo mudo y agendando notas contra un reloj que
+     no paraba: al volver, la musica habia "avanzado" sola. Suspendido, el reloj
+     del audio se congela y todo retoma exactamente donde estaba. */
+  pausar(){ if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {}); },
+  reanudar(){
+    if (!this.ctx) return;
+    this.ctx.resume().catch(() => {});
+    this.aplicarVolumenes();
+  },
 
   // §14.1: curva logaritmica, no lineal — un slider lineal se siente todo
   // apretado arriba.

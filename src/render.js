@@ -6,11 +6,11 @@
    que es justo lo que el §4.5-1 dice que hay que ahorrar.
    =========================================================================== */
 import * as THREE from 'three';
-import { CONFIG } from './config.js';
+import { CONFIG, RES, clamp } from './config.js';
 import { TextureGen } from './texturas.js';
 import { crearPSX, LUCES_U, MATS, POST_VERT, POST_FRAG } from './shaders.js';
 
-const [RW, RH] = CONFIG.resInterna;
+
 
 export const Render = {
   renderer: null, escena: null, camara: null, rt: null,
@@ -32,7 +32,7 @@ export const Render = {
     if (!this.renderer.getContext()) return false;
 
     this.renderer.setPixelRatio(1);
-    this.renderer.setSize(RW, RH, false);
+    this.renderer.setSize(RES.w, RES.h, false);
     this.renderer.autoClear = false;
     // info se resetea en cada render(); con dos pasadas por frame el contador
     // solo reportaria el quad de post. Se resetea a mano, una vez por frame.
@@ -68,12 +68,12 @@ export const Render = {
     MATS.polvo     = crearPSX({ mapa: this.atlas, aditivo: true, side: THREE.DoubleSide, alfa: 0.5 });
 
     this.escena = new THREE.Scene();
-    this.camara = new THREE.PerspectiveCamera(CONFIG.camFov, RW / RH, 0.5, 120);
+    this.camara = new THREE.PerspectiveCamera(CONFIG.camFov, RES.w / RES.h, 0.5, 120);
     this.camara.position.set(...CONFIG.camPos);
     this.camara.lookAt(new THREE.Vector3(...CONFIG.camMira));
 
     // §4.5-1: todo se renderiza a 320x240 con NearestFilter en mag y min
-    this.rt = new THREE.WebGLRenderTarget(RW, RH, {
+    this.rt = new THREE.WebGLRenderTarget(RES.w, RES.h, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
       depthBuffer: true, stencilBuffer: false,
@@ -84,7 +84,7 @@ export const Render = {
     this.postMat = new THREE.ShaderMaterial({
       uniforms: {
         uEscena:   { value: this.rt.texture },
-        uRes:      { value: new THREE.Vector2(RW, RH) },
+        uRes:      { value: new THREE.Vector2(RES.w, RES.h) },
         uNiveles:  { value: CONFIG.nivelesColor },
         uDither:   { value: CONFIG.ditherFuerza },
         uFlash:    { value: 0 },
@@ -126,21 +126,44 @@ export const Render = {
   },
 
   get info(){ return this.renderer ? this.renderer.info : null; },
+
+  /* Cambia el ancho del buffer interno. El alto no se toca: es lo que fija el
+     tamaño del pixel, y si cambiara, el juego se veria mas o menos "pixelado"
+     segun el telefono. */
+  redimensionar(ancho){
+    if (!this.ok || ancho === RES.w) return;
+    RES.w = ancho;
+    this.renderer.setSize(RES.w, RES.h, false);
+    this.rt.setSize(RES.w, RES.h);
+    this.camara.aspect = RES.w / RES.h;
+    this.camara.updateProjectionMatrix();
+    this.postMat.uniforms.uRes.value.set(RES.w, RES.h);
+    // el vertex snapping del §4.5-2 cuantiza contra la resolucion: si no se
+    // actualiza, el temblor deja de coincidir con los pixeles reales
+    LUCES_U.uRes.value.set(RES.w, RES.h);
+  },
 };
 
-/* --- Letterbox 4:3 (§17.6) ---------------------------------------------
-   El canvas es siempre de 320x240; lo que cambia es la caja CSS. En celular va
-   centrado y las zonas tactiles ocupan las mitades de TODA la pantalla, no solo
-   del canvas, asi que no hace falta rotar el telefono.                      */
+/* --- Encuadre (§17.6) ---------------------------------------------------
+   El buffer interno se ensancha para acompañar la pantalla, entre 320 y 448 px
+   de ancho, siempre con 240 de alto. Despues el canvas se estira con
+   image-rendering: pixelated hasta llenar lo que se pueda sin recortar.
+   En celular las zonas tactiles ocupan TODA la pantalla, no solo el canvas.  */
 export function ajustarLetterbox(){
   const stage = document.getElementById('stage');
   const w = innerWidth, h = innerHeight;
-  const escala = Math.min(w / RW, h / RH);
-  const cw = Math.floor(RW * escala), ch = Math.floor(RH * escala);
-  stage.style.width = cw + 'px';
-  stage.style.height = ch + 'px';
+
+  // el ancho interno sigue la proporcion de la pantalla, en pasos de 2 px para
+  // que no queden medios pixeles al escalar
+  const deseado = Math.round(RES.h * (w / h) / 2) * 2;
+  const ancho = clamp(deseado, CONFIG.resAnchoMin, CONFIG.resAnchoMax);
+  Render.redimensionar(ancho);
+
+  const escala = Math.min(w / RES.w, h / RES.h);
+  stage.style.width = Math.floor(RES.w * escala) + 'px';
+  stage.style.height = Math.floor(RES.h * escala) + 'px';
   // El HUD se dimensiona en em: una sola linea lo escala entero con la ventana.
-  // El 5.5 es el tamaño de la unidad base medido en pixeles INTERNOS, asi que
-  // el HUD ocupa siempre la misma fraccion de los 320x240, se vea donde se vea.
-  stage.style.fontSize = (ch / RH * 5.5).toFixed(3) + 'px';
+  // Va contra el ALTO, que es el que no cambia, asi el HUD ocupa siempre la
+  // misma fraccion de pantalla se vea donde se vea.
+  stage.style.fontSize = (RES.h * escala / RES.h * 5.5).toFixed(3) + 'px';
 }

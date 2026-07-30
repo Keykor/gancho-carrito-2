@@ -4,12 +4,11 @@
    proyectar el mundo a la pantalla, y por eso el Player la recibe inyectada.
    =========================================================================== */
 import * as THREE from 'three';
-import { CONFIG, NCARRILES, clamp, lerp, reducedMotion } from './config.js';
+import { CONFIG, RES, NCARRILES, clamp, lerp, reducedMotion } from './config.js';
 import { GeoFactory } from './geo.js';
 import { MATS } from './shaders.js';
 import { TIPO, HOOKEABLE } from './entities.js';
 
-const [RW, RH] = CONFIG.resInterna;
 const PRIORIDAD = { [TIPO.COMPANIERA]: 3, [TIPO.MURCIELAGO]: 2, [TIPO.GEMA]: 1 };
 
 // Altura a la que "vive" cada tipo, PARA DIBUJARLO Y PARA APUNTARLE. Tienen
@@ -153,8 +152,8 @@ export class Vista {
 
   proyectar(x, y, z, out){
     this._v.set(x, y, z).project(this.camara);
-    out.x = (this._v.x * 0.5 + 0.5) * RW;
-    out.y = (1 - (this._v.y * 0.5 + 0.5)) * RH;
+    out.x = (this._v.x * 0.5 + 0.5) * RES.w;
+    out.y = (1 - (this._v.y * 0.5 + 0.5)) * RES.h;
     out.detras = this._v.z > 1;
     return out;
   }
@@ -230,7 +229,7 @@ export class Vista {
      click no le pega ni a un objetivo ni a una pared, es gancho al vacio
      (clank y perdes el cooldown), que es lo que dice el §7.0.                */
   paredBajoCursor(px, py){
-    this._ndc.set(px / RW * 2 - 1, -(py / RH * 2 - 1));
+    this._ndc.set(px / RES.w * 2 - 1, -(py / RES.h * 2 - 1));
     this._raycaster.setFromCamera(this._ndc, this.camara);
     const r = this._raycaster.ray;
     let mejor = null;
@@ -257,9 +256,9 @@ export class Vista {
        contara como afuera, y tirar el gancho hacia adelante salia para un lado:
        adelante y arriba son la misma zona de pantalla. */
     const suelo = this.planoBajoCursor(px, py);
-    const borde = RW * CONFIG.hookBordePantalla;
+    const borde = RES.w * CONFIG.hookBordePantalla;
     if (px < borde)      return { lado: -1, z: clamp(suelo.z, -CONFIG.hookAlcance, 1), t: 0 };
-    if (px > RW - borde) return { lado:  1, z: clamp(suelo.z, -CONFIG.hookAlcance, 1), t: 0 };
+    if (px > RES.w - borde) return { lado:  1, z: clamp(suelo.z, -CONFIG.hookAlcance, 1), t: 0 };
     if (suelo.dentro && Math.abs(suelo.x) >= CONFIG.paredX - 0.15)
       return { lado: suelo.x < 0 ? -1 : 1, z: clamp(suelo.z, -CONFIG.hookAlcance, 1), t: 0 };
     return null;                     // apuntaste al frente: no hay pared ahi
@@ -267,7 +266,7 @@ export class Vista {
 
   // Punto del plano de juego bajo el cursor. Sirve para el gancho al vacio.
   planoBajoCursor(px, py){
-    this._ndc.set(px / RW * 2 - 1, -(py / RH * 2 - 1));
+    this._ndc.set(px / RES.w * 2 - 1, -(py / RES.h * 2 - 1));
     this._raycaster.setFromCamera(this._ndc, this.camara);
     const r = this._raycaster.ray;
     // dentro=false cuando el rayo se va por arriba del horizonte y no toca

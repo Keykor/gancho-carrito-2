@@ -192,7 +192,7 @@ export const Game = {
       this.estadoPrevio = this.estado;
       this.estado = ESTADO.PAUSA;
       HUD.mostrar('pausa');
-      if (Audio.ctx) Audio.master.gain.setTargetAtTime(0.0001, Audio.ctx.currentTime, 0.05);
+      Audio.pausar();
     } else if (this.estado === ESTADO.PAUSA){
       this.despausar();
     }
@@ -201,7 +201,7 @@ export const Game = {
   despausar(){
     this.estado = this.estadoPrevio || ESTADO.JUGANDO;
     HUD.mostrar(null);
-    Audio.aplicarVolumenes();
+    Audio.reanudar();
   },
 
   terminar(escapo){
