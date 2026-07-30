@@ -92,27 +92,6 @@ body{display:flex;align-items:center;justify-content:center}
 #reticula .arco{fill:none;stroke:#fff;stroke-width:2.6;opacity:.9;vector-effect:non-scaling-stroke}
 #reticula.oculta{opacity:0}
 
-/* Cartel de ayuda contextual */
-/* Ficha de rescate: quien es y que deja. La habilidad es permanente y cambia
-   como se juega el resto de la partida, asi que tiene que decirse en el
-   momento — estaba solo en un tooltip de los retratos, que en tactil no existe. */
-#ficha{position:absolute;left:50%;top:56%;transform:translateX(-50%);
-  display:flex;align-items:center;gap:.7em;white-space:nowrap;
-  background:rgba(11,10,18,.88);border:.11em solid var(--luz-casco);
-  border-radius:.2em;padding:.5em .8em;opacity:0;transition:opacity .2s}
-#ficha.on{opacity:1}
-#ficha canvas{width:2.8em;height:2.8em;image-rendering:pixelated;border-radius:.15em}
-#ficha div{display:flex;flex-direction:column;align-items:flex-start;gap:.1em;text-align:left}
-#ficha b{font-family:var(--display);font-size:1.6em;font-weight:700;color:var(--luz-casco);
-  text-transform:uppercase;letter-spacing:.04em;line-height:1}
-#ficha span{font-size:1.15em;color:#E8E4F0;line-height:1.2}
-
-#hint{position:absolute;left:50%;top:62%;transform:translateX(-50%);
-  font-family:var(--display);font-size:2.2em;font-weight:700;text-transform:uppercase;
-  letter-spacing:.06em;color:var(--luz-casco);text-shadow:0 .12em 0 rgba(0,0,0,.9);
-  opacity:0;transition:opacity .2s;white-space:nowrap}
-#hint.on{opacity:1}
-
 /* Marcador de tramo / mensaje de tutorial */
 /* El cartel del tutorial: con caja propia, para que no compita con la roca */
 #beat{position:absolute;left:50%;bottom:13%;transform:translateX(-50%);
@@ -381,8 +360,7 @@ h2.titulo-pantalla{font-family:var(--display);font-size:3.4em;font-weight:700;
     <div class="corner br"><div id="companieras"></div></div>
     <div id="avisos"></div>
     <div id="reticula"><svg viewBox="0 0 40 40"><g id="ret-forma"></g><path class="arco" id="ret-arco"></path></svg></div>
-    <div id="hint"></div>
-    <div id="ficha" class="hide"><canvas></canvas><div><b></b><span></span></div></div>
+      <div id="ficha" class="hide"><canvas></canvas><div><b></b><span></span></div></div>
     <div id="beat"></div>
     <button id="b-pausa" class="hide" aria-label="Pausa"></button>
   </div>

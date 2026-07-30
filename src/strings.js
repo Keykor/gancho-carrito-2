@@ -54,9 +54,6 @@ es: {
   'girar.titulo'           : 'Giralo',
   'girar.cuerpo'           : 'El juego se juega apaisado. Girá el teléfono y listo.',
 
-  'hint.desvio'            : 'Desvío',
-  'hint.viga'              : 'Viga',
-  'hint.companiera'        : 'Compañera',
 
   'tramo.1'                : 'Bocamina',
   'tramo.2'                : 'Galería',
@@ -174,9 +171,6 @@ en: {
   'girar.titulo'           : 'Turn it',
   'girar.cuerpo'           : 'This one is played in landscape. Turn your phone and you are set.',
 
-  'hint.desvio'            : 'Switch',
-  'hint.viga'              : 'Beam',
-  'hint.companiera'        : 'Companion',
 
   'tramo.1'                : 'Adit',
   'tramo.2'                : 'Gallery',

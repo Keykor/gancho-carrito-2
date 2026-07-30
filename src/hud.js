@@ -52,7 +52,6 @@ export const HUD = {
   el: {},
   vagonesDibujados: -1,
   rachaPrev: 0,
-  hintTimer: 0,
   beatTimer: 0,
   proyector: null,
   onAccion: {},          // el Game se suscribe: 'jugar','tutorial','seguir',...
@@ -60,7 +59,7 @@ export const HUD = {
   init(){
     const el = this.el;
     for (const id of ['reloj','gemas-n','racha','vidas','escudo','companieras','avisos',
-                      'reticula','ret-forma','ret-arco','hint','beat','stats','debug2d',
+                      'reticula','ret-forma','ret-arco','beat','stats','debug2d',
                       'audio-aviso','b-pausa','ficha','stage'])
       el[id] = $(id);
 
@@ -279,12 +278,6 @@ export const HUD = {
     this.fichaTimer = 2.6;
   },
 
-  hint(clave){
-    const e = this.el['hint'];
-    e.textContent = t(clave);
-    e.classList.add('on');
-    this.hintTimer = 1.5;
-  },
   beat(texto){
     const e = this.el['beat'];
     e.textContent = texto;
@@ -296,10 +289,6 @@ export const HUD = {
   actualizar(dt, ctx){
     const { player, tiempo, mundo, vista, vel, enJuego } = ctx;
 
-    if (this.hintTimer > 0){
-      this.hintTimer -= dt;
-      if (this.hintTimer <= 0) this.el['hint'].classList.remove('on');
-    }
     if (this.fichaTimer > 0){
       this.fichaTimer -= dt;
       if (this.fichaTimer <= 0) this.el['ficha'].classList.remove('on');

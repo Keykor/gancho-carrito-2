@@ -36,7 +36,6 @@ export const Game = {
   acum: 0,
   ultimo: 0,
   fps: 60, _fpsAcum: 0, _fpsN: 0,
-  hints: almacen.leer('gc2.hints', {}),
   aviso: '',
   avisoT: 0,
 
@@ -273,7 +272,6 @@ export const Game = {
       if (this.tutorial.terminado) this.terminarTutorial();
     } else {
       this.spawner.paso(dt, this.tiempo, this.mundo);
-      this.chequearHints();
       if (p.vidas <= 0){ this.terminar(false); return; }
     }
 
@@ -294,20 +292,6 @@ export const Game = {
     const velAudio  = esTut ? Math.max(this.vel, velocidadEn(0) * 0.9) : this.vel;
     Music.actualizar(progAudio, this.tramo);
     CartSfx.actualizar(dt, velAudio, esTut ? 10 : this.tiempo, this.mundo.zAcum);
-  },
-
-  /* §12.5: la primera vez que aparece un desvio, una viga y una companiera, un
-     cartel de dos palabras por 1.5 s. Solo la primera vez de cada uno. */
-  chequearHints(){
-    const pares = [[TIPO.DESVIO,'desvio'], [TIPO.VIGA,'viga'], [TIPO.COMPANIERA,'companiera']];
-    for (const [tipo, clave] of pares){
-      if (this.hints[clave]) continue;
-      if (this.mundo.vivos(tipo).some(e => e.vivo && e.z > -34)){
-        this.hints[clave] = true;
-        almacen.escribir('gc2.hints', this.hints);
-        HUD.hint('hint.' + clave);
-      }
-    }
   },
 
   procesarEventos(){
