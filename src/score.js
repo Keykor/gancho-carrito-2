@@ -9,17 +9,17 @@ import { CONFIG, almacen } from './config.js';
 
 /* §11. Los cinco finales.
 
-   La tabla del §11 se contradice sola: la fila del final 3 pide C >= 3, pero la
-   regla de "cualquier otro caso" lo daba con C >= 2. Con dos de cuatro el juego
-   te felicitaba por sacar a todas, y el titulo del final es una afirmacion
-   sobre lo que hiciste — si miente, todo el sistema de finales miente.
-   Gana la fila: "Salimos todas" necesita 3 o 4. Lo que queda con menos se
-   decide por gemas, que es el otro eje del §11.                              */
+   El §11 daba "Salimos todas" con C >= 3, y su regla de "cualquier otro caso"
+   incluso con C >= 2. Las dos cosas mienten: con tres de cuatro dejaste una
+   abajo, y el titulo de un final es una afirmacion sobre lo que hiciste. Si
+   miente, todo el sistema de finales miente.
+   Acá TODAS son las cuatro. Lo que queda debajo se decide por gemas, que es el
+   otro eje de la matriz del §11.                                             */
 export function evaluarFinal(escapo, gemas, comps){
   if (!escapo) return 0;
   const G = gemas, C = comps;
-  if (C === 4 && G >= CONFIG.gemasUmbralVerdadero) return 4;   // Cosas de Minas
-  if (C >= 3) return 3;                                        // Salimos todas
+  // las cuatro afuera: con la carga es el final verdadero, sin ella el humano
+  if (C === 4) return G >= CONFIG.gemasUmbralVerdadero ? 4 : 3;
   if (G >= CONFIG.gemasUmbral) return 2;                       // La dueña de la veta
   return 1;                                                    // Salida raspando
 }
@@ -72,7 +72,7 @@ export function pistaDeFinal(datos, vistos){
   if (falta(4) && (C >= 2 || G >= U))
     return { clave: 'pista.4', params: { c: C, g: G, faltanG: Math.max(0, V - G),
                                          faltanC: Math.max(0, 4 - C) } };
-  if (falta(3) && C < 3)  return { clave: 'pista.3', params: { c: C } };
+  if (falta(3) && C < 4)  return { clave: 'pista.3', params: { c: C } };
   if (falta(2) && G < U)  return { clave: 'pista.2', params: { faltanG: Math.max(1, U - G) } };
   if (falta(1) && !escapo) return { clave: 'pista.1' };
   if (falta(0))            return { clave: 'pista.0' };
