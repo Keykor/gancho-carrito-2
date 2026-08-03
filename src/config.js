@@ -11,7 +11,11 @@ export const CONFIG = {
   // §6 da la curva en px/s (340→760). El juego es 3D en unidades de mundo y
   // §14.3 usa 32 u/s como referencia, asi que se divide por pxPorUnidad.
   velPxIni: 340,
-  velPxFin: 760,
+  // El §6 la llevaba a 760. Pasado el minuto el juego se volvia imposible: no
+  // por dificil, sino porque a esa velocidad los esquives salen o no salen por
+  // margenes que no se pueden ver. Bajar el techo aplana solo la punta de la
+  // curva; el arranque y el medio quedan igual.
+  velPxFin: 640,
   // El divisor entre la curva en px/s del §6 y las unidades de mundo. Es LA
   // perilla de la velocidad: mas alto = mas lento. Arranco en 14 (0.26 s de
   // anticipacion en el peor caso: injugable), paso por 18, y termino en 23
@@ -148,11 +152,15 @@ export const CONFIG = {
 
   // --- Spawner (§9) ----------------------------------------------------
   gapFactorBase: 0.9,
-  gapFactorTramo: 0.08,
+  gapFactorTramo: 0.05,          // los patrones tardios respiran mas
   gapMinSeg: 0.35,
   gemasEnCaminoFacil: 0.60,      // 60/40 (§9): el riesgo se paga
   desvioAvisoSeg: 1.4,
-  vigaAvisoSeg: 0.8,
+  /* La viga avisaba 0.8 s antes. A la velocidad del tramo 4 eso es medio
+     segundo de reaccion real, y como cae del techo no se la ve venir de lejos
+     como al resto: era el obstaculo mas injusto del juego. Con 1.8 s la sombra
+     del piso aparece con tiempo de leerla Y de moverse. */
+  vigaAvisoSeg: 1.8,
   // §9 lo tenia zigzagueando cada 0.45 s. Se saco: un bicho que se te cruza de
   // carril mientras lo mirás no se puede leer a 320x240, y encima compite con
   // el gancho por la misma decision. Ahora viene derecho por su carril y la

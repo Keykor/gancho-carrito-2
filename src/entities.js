@@ -146,13 +146,16 @@ class Mundo {
   }
 
   pasoViga(e, dt, vel){
-    // Cae del techo para aterrizar justo sobre el carrito: la sombra en el
-    // piso avisa 0.8 s antes (§9). Antes de tocar el piso no colisiona.
+    // Cae del techo para aterrizar justo sobre el carrito. La sombra en el piso
+    // avisa vigaAvisoSeg antes (§9). Antes de tocar el piso no colisiona.
     const seg = vel > 0 ? (0 - e.z) / vel : 99;
     if (seg <= CONFIG.vigaAvisoSeg){
       e.cayendo = true;
+      // la caida se concentra en el ultimo tercio del aviso: los primeros dos
+      // tercios se ve la sombra en el piso y la viga todavia colgando, que es
+      // lo que da tiempo a decidir
       const p = clamp(1 - seg / CONFIG.vigaAvisoSeg, 0, 1);
-      e.y = lerp(CONFIG.altoTunel - 0.2, 0.45, easeIn(p));
+      e.y = lerp(CONFIG.altoTunel - 0.2, 0.45, easeIn(clamp((p - 0.55) / 0.45, 0, 1)));
     } else {
       e.y = CONFIG.altoTunel - 0.2;
     }
