@@ -319,8 +319,12 @@ export const Game = {
         }
         case 'murcielago-muerto': Sfx.murcielagoMuere(); break;
         case 'rescate':
-          HUD.rescate(ev.idx);
+          HUD.rescate(ev.idx, ev.vidaExtra);
           Sfx.rescate();
+          if (ev.vidaExtra){
+            Sfx.escudo(false);                 // el tono que sube: algo se recupero
+            Render.flash(0.5, 0xFF3D5A);
+          }
           Render.flash(0.85, 0xFFD166);       // fogonazo de luz (§8)
           this.luces.encender(1 + this.player.companieras.length);
           break;

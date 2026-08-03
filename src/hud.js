@@ -267,14 +267,22 @@ export const HUD = {
 
   /* Al rescatar: quien es y que habilidad deja (§8). Se muestra 2.6 s, que es
      lo que tarda en leerse sin sacar la vista del tunel mas de un instante. */
-  rescate(idx){
+  rescate(idx, vidaExtra){
     const f = this.el['ficha'];
     TextureGen.recorteCara(idx, f.querySelector('canvas'), 32);
     f.querySelector('b').textContent = t(`comp.${idx}.nombre`);
     f.querySelector('span').textContent = t(`comp.${idx}.habilidad`);
+    f.classList.toggle('con-vida', !!vidaExtra);
+    const extra = f.querySelector('.vida');
+    if (extra) extra.textContent = t('hud.vidaExtra');
     f.classList.remove('hide');
     f.classList.add('on');
-    this.fichaTimer = 2.6;
+    this.fichaTimer = vidaExtra ? 3.0 : 2.6;
+    // el corazon que se recupera late, para que se vea de donde salio
+    if (vidaExtra){
+      const c = this.cascos[Math.min(CONFIG.vidas, this.cascosLlenos + 1) - 1];
+      if (c && !reducedMotion){ c.classList.remove('gana'); void c.offsetWidth; c.classList.add('gana'); }
+    }
   },
 
   beat(texto){
@@ -313,6 +321,7 @@ export const HUD = {
     }
     this.rachaPrev = player.racha;
 
+    this.cascosLlenos = player.vidas;
     this.cascos.forEach((c, i) => c.classList.toggle('gastado', i >= player.vidas));
     const escEl = this.el['escudo'];
     escEl.classList.toggle('on', player.hab.beba);

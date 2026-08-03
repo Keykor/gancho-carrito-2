@@ -189,8 +189,14 @@ export class Player {
       case 3: this.hab.beba  = true; this.escudo = true; break;
       case 4: this.hab.tuca  = true; break;
     }
+    // §8 + regla propia: subir a una companiera devuelve una vida si falta
+    let vidaExtra = false;
+    if (CONFIG.vidaPorRescate && this.vidas < CONFIG.vidas){
+      this.vidas++;
+      vidaExtra = true;
+    }
     this.sumarRacha();
-    this.emitir('rescate', { idx: e.idx });
+    this.emitir('rescate', { idx: e.idx, vidaExtra, vidas: this.vidas });
   }
 
   golpe(){

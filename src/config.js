@@ -134,6 +134,12 @@ export const CONFIG = {
   vagonSepar: 1.0,
   // Y la camara se abre un poco por cada companiera, asi el tren entra siempre.
   camAtrasPorComp: 0.85,
+  /* Rescatar devuelve una vida, si te falta alguna. Es lo que cierra el trato
+     que propone el §8: rescatar es la decision mas cara del juego y hasta ahora
+     solo pagaba a futuro (una habilidad y un final). Con esto tambien paga en
+     el momento, y encima en la moneda que mas duele — asi el que viene golpeado
+     tiene una razon real para gastar el gancho en alguien que no es el. */
+  vidaPorRescate: true,
   compAvisoSeg: 3.0,
   compVentana: 1.2,              // s corriendo a la par del carrito
   cholaCooldown: 0.70,           // -30 %

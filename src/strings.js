@@ -30,7 +30,7 @@ es: {
   'ayuda.encima'           : 'Sin hacer nada',
   'ayuda.encimaR'          : 'Todo lo que pasa por debajo del carrito se recoge gratis.',
   'ayuda.cierre'           : 'El gancho tarda un momento en volver, y es el mismo para moverse, para recoger y para esquivar. Por eso hay que elegir.',
-  'ayuda.compsTitulo'      : 'Hay cuatro mineras atrapadas. Cada una que subas te deja algo para siempre:',
+  'ayuda.compsTitulo'      : 'Hay cuatro mineras atrapadas. Subir a una te devuelve una vida, si te falta, y te deja algo para siempre:',
   'ayuda.teclado'          : 'Todo se juega con el mouse o con el dedo. La única tecla es {esc}, que pausa.',
   'ayuda.volver'           : 'Volver',
   'ayuda.siguiente'        : 'Siguiente',
@@ -51,6 +51,7 @@ es: {
   'hud.puntaje'            : 'Puntaje',
   'hud.audioSuspendido'    : 'Tocá para activar el sonido',
   'hud.pausa'              : 'Pausa',
+  'hud.vidaExtra'          : '+1 vida',
   'girar.titulo'           : 'Giralo',
   'girar.cuerpo'           : 'El juego se juega apaisado. Girá el teléfono y listo.',
 
@@ -147,7 +148,7 @@ en: {
   'ayuda.encima'           : 'Doing nothing',
   'ayuda.encimaR'          : 'Anything that passes under the cart is picked up for free.',
   'ayuda.cierre'           : 'The hook takes a moment to come back, and it is the same hook for moving, for grabbing and for dodging. That is why you have to choose.',
-  'ayuda.compsTitulo'      : 'Four miners are trapped down there. Each one you bring aboard leaves you something for good:',
+  'ayuda.compsTitulo'      : 'Four miners are trapped down there. Bringing one aboard gives you a life back, if you are missing one, and leaves you something for good:',
   'ayuda.teclado'          : 'It is all played with the mouse or your finger. The only key is {esc}, which pauses.',
   'ayuda.volver'           : 'Back',
   'ayuda.siguiente'        : 'Next',
@@ -168,6 +169,7 @@ en: {
   'hud.puntaje'            : 'Score',
   'hud.audioSuspendido'    : 'Tap to turn the sound on',
   'hud.pausa'              : 'Pause',
+  'hud.vidaExtra'          : '+1 life',
   'girar.titulo'           : 'Turn it',
   'girar.cuerpo'           : 'This one is played in landscape. Turn your phone and you are set.',
 
