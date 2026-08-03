@@ -298,7 +298,13 @@ export const HUD = {
 
     if (this.fichaTimer > 0){
       this.fichaTimer -= dt;
-      if (this.fichaTimer <= 0) this.el['ficha'].classList.remove('on');
+      if (this.fichaTimer <= 0){
+        // se apaga Y se saca del layout: solo quitar 'on' la dejaba invisible
+        // pero presente, y sin su CSS eso fue una caja de texto arriba a la
+        // izquierda durante toda la partida
+        this.el['ficha'].classList.remove('on');
+        this.el['ficha'].classList.add('hide');
+      }
     }
 
     // cronometro regresivo, en rojo y pulsando bajo los 20 s (§12)
