@@ -234,10 +234,14 @@ const PATRONES = [
 // con la prosa: premio inmediato, castigo diferido.
 { nombre:'la-viga', tramo:4, filas:[
   '##...',
-  'gg...',
-  'gg...',
-  '..VVV',
   '.....',
+  '.....',
+  '.....',
+  'gg...',
+  'gg...',
+  '.....',
+  '.....',
+  '..VVV',
   '.....',
 ]},
 
@@ -249,9 +253,13 @@ const PATRONES = [
   '.....',
   'VV...',
   '.....',
+  '.....',
+  '.....',
+  '.....',
   '....g',
   '....g',
   '....g',
+  '.....',
   '.....',
   '.....',
   '..VVV',
@@ -265,20 +273,24 @@ const PATRONES = [
 { nombre:'derrumbe-total', tramo:4, filas:[
   '.....',
   '..b..',
+  '.g.g.',
+  '.....',
   '.#.#.',
   '.g.g.',
-  '.#.#.',
   'g.g.g',
-  '.#.#.',
+  '.....',
   '.g.g.',
+  '.....',
   '#.#.#',
   '.g.g.',
   'g.g.g',
   '.....',
+  '.g.g.',
   '.....',
   '.....',
-  '.....',
-  '.....',
+  '.#.#.',
+  '.g.g.',
+  'g.g.g',
   '.....',
   'm...m',
   '.....',
@@ -352,25 +364,44 @@ function movimientos(cdEscala = 1){
   ];
 }
 
-// Tiempos de llegada de cada fila. La ULTIMA fila llega primero (§9.5).
+/* Tiempos de llegada de cada fila. La ULTIMA fila llega primero (§9.5).
+   El offset inicial es el hueco REAL que el spawner deja antes del patron, no
+   el minimo absoluto: es el tiempo que el jugador tiene para acomodarse antes
+   de que llegue la primera fila, y con el minimo el validador exigia entrar
+   bien parada desde cualquier carril en 0.35 s. */
 function tiemposDeFilas(patron, vel){
   const n = patron.filas.length, sep = CONFIG.gemaSeparacion;
-  return patron.filas.map((_, i) => CONFIG.gapMinSeg + (n - 1 - i) * sep / vel);
+  const hueco = Math.max(CONFIG.gapFactorBase - patron.tramo * CONFIG.gapFactorTramo,
+                         CONFIG.gapMinSeg);
+  return patron.filas.map((_, i) => hueco + (n - 1 - i) * sep / vel);
 }
 
-// Alcanzables desde un conjunto de estados antes de tLimite.
-// estados: Map carril → tReady minimo (un tReady menor domina siempre).
-function expandir(estados, tLimite, movs){
+/* Carriles alcanzables entre dos filas.
+
+   `tDesde` es el instante en el que el jugador quedo CLAVADO en ese carril: el
+   de la ultima fila que bloqueaba algo. Sin ese dato el validador media el
+   movimiento desde que el gancho quedaba listo —que puede ser mucho antes— y
+   daba por bueno un esquive que exige haber estado en dos carriles a la vez.
+   Asi paso `derrumbe-total`, con filas que alternaban el carril seguro cada
+   0.11 s cuando moverse tarda 0.14.
+   Y tiene que ser la ultima fila que BLOQUEA, no la ultima fila a secas: una
+   fila vacia (o de gemas) no te ata a ningun carril, y contarla convertia en
+   imposible cualquier patron con espacio de sobra entre sus obstaculos.
+
+   estados: Map carril → tReady minimo (un tReady menor domina siempre).      */
+function expandir(estados, tDesde, tLimite, movs){
   const out = new Map(estados);
   let cambio = true;
   while (cambio){
     cambio = false;
     for (const [c, tr] of Array.from(out)){
+      // el tiron no puede arrancar antes de estar parada en este carril
+      const inicio = Math.max(tr, tDesde);
       for (const m of movs){
         const c2 = c + m.d;
         if (c2 < 0 || c2 >= NCARRILES) continue;      // pegarle a la pared del
-        if (tr + m.dur > tLimite) continue;           // borde no te mueve (§7.2)
-        const tr2 = tr + m.cd;
+        if (inicio + m.dur > tLimite) continue;       // borde no te mueve (§7.2)
+        const tr2 = inicio + m.cd;
         if (!out.has(c2) || out.get(c2) > tr2 + 1e-9){ out.set(c2, tr2); cambio = true; }
       }
     }
@@ -388,10 +419,12 @@ function esResoluble(patron, vel, cdEscala = 1){
 
   for (let entrada = 0; entrada < NCARRILES; entrada++){
     let estados = new Map([[entrada, 0]]);
-    let ok = true;
+    let ok = true, tClavado = 0;
     for (const i of orden){
       const fila = patron.filas[i];
-      estados = expandir(estados, tiempos[i], movs);
+      estados = expandir(estados, tClavado, tiempos[i], movs);
+      // solo las filas que bloquean te dejan clavada donde estabas
+      if (bloqueadosEnFila(fila).size > 0) tClavado = tiempos[i];
       const bloq = bloqueadosEnFila(fila);
       const sig = new Map();
       for (const [c, tr] of estados){
@@ -448,7 +481,7 @@ function esAvaro(patron, vel, cdEscala = 1){
   // DFS acotado sobre (fila, carril) contando ganchos de esquive y grupos que
   // el camino recorre gratis. Nos interesa el MEJOR caso para el jugador.
   let mejor = Infinity, nodos = 0;
-  const rec = (k, carril, tReady, ganchos, visitadas) => {
+  const rec = (k, carril, tReady, ganchos, visitadas, tPrevio = 0) => {
     if (++nodos > 20000 || ganchos >= mejor) return;
     if (k === orden.length){
       const gratis = grupos.filter(g => g.filas.every(f => visitadas[f] === g.carril)).length;
@@ -457,7 +490,7 @@ function esAvaro(patron, vel, cdEscala = 1){
       return;
     }
     const i = orden[k], fila = patron.filas[i], bloq = bloqueadosEnFila(fila);
-    const alc = expandir(new Map([[carril, tReady]]), tiempos[i], movs);
+    const alc = expandir(new Map([[carril, tReady]]), tPrevio, tiempos[i], movs);
     for (const [c, tr] of alc){
       if (bloq.has(c)) continue;
       let c2 = c, tr2 = tr;
@@ -466,7 +499,8 @@ function esAvaro(patron, vel, cdEscala = 1){
         tr2 = Math.max(tr, tiempos[i] + CONFIG.desvioFuerzaDur);
       }
       visitadas[i] = c2;
-      rec(k + 1, c2, tr2, ganchos + (c === carril ? 0 : 1), visitadas);
+      rec(k + 1, c2, tr2, ganchos + (c === carril ? 0 : 1), visitadas,
+          bloq.size > 0 ? tiempos[i] : tPrevio);
       visitadas[i] = -1;
     }
   };
@@ -500,6 +534,23 @@ function validarPatrones(){
   }
   const porTramo = [1,2,3,4].map(t => buenos.filter(p => p.tramo === t).length);
   console.assert(porTramo.every(n => n >= 4), 'algun tramo se quedo sin patrones', porTramo);
+  /* Filas vecinas sin carril comun: si dos filas que llegan seguidas no
+     comparten ningun carril seguro, hay que cambiar de carril en el tiempo que
+     hay entre ellas, y eso puede ser menos que lo que tarda un tiron. Es el
+     caso que hacia inesquivable al tramo 4 y no lo cazaba nadie. */
+  for (const p of buenos){
+    const vel = velMaxDeTramo(p.tramo);
+    const entreFilas = CONFIG.gemaSeparacion / vel;
+    const durMin = Math.min(CONFIG.hookTironPerp.dur, CONFIG.hookTironRas.dur);
+    for (let i = p.filas.length - 1; i > 0; i--){
+      const a = bloqueadosEnFila(p.filas[i]), b = bloqueadosEnFila(p.filas[i - 1]);
+      const comun = CONFIG.carrilesX.some((_, c) => !a.has(c) && !b.has(c));
+      console.assert(comun || entreFilas >= durMin,
+        `${p.nombre}: las filas ${i} y ${i-1} no comparten carril seguro y hay ` +
+        `${entreFilas.toFixed(3)}s entre ellas (mover tarda ${durMin}s)`);
+    }
+  }
+
   // §16: tiene que existir al menos un patron por tramo donde haya que
   // renunciar a gemas para sobrevivir.
   for (const t of [1,2,3,4])
