@@ -4,12 +4,13 @@
    el centro es zona de juego.
    Ningun texto sale hardcodeado: todo pasa por t() (§16).
    =========================================================================== */
-import { CONFIG, RES, NCARRILES, clamp, reducedMotion } from './config.js';
+import { CONFIG, RES, NCARRILES, clamp, reducedMotion,
+         CASCOS, cascoDesbloqueado, leerCascoElegido, guardarCascoElegido } from './config.js';
 import { t, tp, setLang, idioma, alCambiarIdioma } from './strings.js';
 import { TextureGen, TX } from './texturas.js';
 import { TIPO } from './entities.js';
 import { Audio, Sfx } from './audio.js';
-import { leerRecord } from './score.js';
+import { leerRecord, leerFinalesVistos } from './score.js';
 
 const $ = id => document.getElementById(id);
 
@@ -101,6 +102,7 @@ export const HUD = {
     set('b-opciones', t('titulo.opciones'));
     const r = leerRecord();
     set('t-record', r > 0 ? t('titulo.record', { n: r }) : t('titulo.sinRecord'));
+    this.armarCascos();
 
     set('ayuda-titulo', t('ayuda.titulo'));
     /* Guia paginada. Los iconos son LOS MISMOS que los de la reticula (§7.1),
@@ -263,6 +265,48 @@ export const HUD = {
     $('hud').style.opacity = (cual === null || cual === 'pausa') ? 1 : 0;
     $('b-pausa').classList.toggle('hide', !jugando);
     if (cual === 'titulo') this.reRender();
+  },
+
+  /* Tira de colores de casco. Se rearma en cada vuelta al titulo (y al cambiar
+     idioma), asi un color recien desbloqueado aparece sin recargar. El color
+     activo del atlas lo aplica el boot; aca solo se refleja cual esta puesto y
+     se cambia al hacer clic. */
+  armarCascos(){
+    const cont = $('casco-tira');
+    if (!cont) return;
+    const lbl = $('casco-label'); if (lbl) lbl.textContent = t('titulo.casco');
+    const vistos = leerFinalesVistos();
+    const elegido = leerCascoElegido(vistos);
+    cont.innerHTML = '';
+    CASCOS.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.className = 'swatch';
+      if (cascoDesbloqueado(i, vistos)){
+        b.style.background = c.hex;
+        // El hex a secas no le dice nada a un lector de pantalla: lo contextualizo
+        // con la etiqueta localizada del selector. El estado elegido va por
+        // aria-pressed, no solo por la clase CSS .sel.
+        b.setAttribute('aria-label', `${t('titulo.casco')}: ${c.hex}`);
+        const sel = i === elegido;
+        b.classList.toggle('sel', sel);
+        b.setAttribute('aria-pressed', sel);
+        b.onclick = () => {
+          Sfx.ui(true);
+          TextureGen.recolorarCasco(c.hex);
+          guardarCascoElegido(i);
+          cont.querySelectorAll('.swatch').forEach((s, j) => {
+            const on = j === i;
+            s.classList.toggle('sel', on);
+            s.setAttribute('aria-pressed', on);
+          });
+        };
+      } else {
+        b.classList.add('trabado');
+        b.disabled = true;
+        b.setAttribute('aria-label', t('titulo.cascoTrabado'));
+      }
+      cont.appendChild(b);
+    });
   },
 
   /* Al rescatar: quien es y que habilidad deja (§8). Se muestra 2.6 s, que es

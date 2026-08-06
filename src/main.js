@@ -2,10 +2,16 @@
    main — punto de entrada. Arranca el juego y, la primera vez que alguien lo
    abre, lo manda directo al tutorial (§12.5).
    =========================================================================== */
-import { CONFIG, almacen } from './config.js';
+import { CONFIG, almacen, CASCOS, leerCascoElegido } from './config.js';
+import { leerFinalesVistos } from './score.js';
+import { TextureGen } from './texturas.js';
 import { Game } from './game.js';
 
 if (Game.init()){
+  // El atlas ya se genero dentro de Game.init(): recien aca se puede repintar el
+  // casco con el color que el jugador dejo elegido (el selector del titulo).
+  TextureGen.recolorarCasco(CASCOS[leerCascoElegido(leerFinalesVistos())].hex);
+
   /* Enganches de arranque por URL, del mismo palo que las teclas F1-F6 (§17.5):
      sirven para testear un tramo sin jugar los 90 s que hay antes.
        ?jugar          arranca la partida derecho, sin tutorial

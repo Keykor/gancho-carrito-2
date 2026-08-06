@@ -256,6 +256,29 @@ export const almacen = {
   },
 };
 
+// Colores de casco. El indice 0 es el default (siempre disponible); los demas
+// se desbloquean con el final indicado en `final` (los 5 del §11). El color
+// vale para Rufa y las cuatro companieras: es el tile compartido del atlas.
+export const CASCOS = [
+  { hex: '#FFD166', final: null },   // amarillo casco  — default
+  { hex: '#8A7FA8', final: 0 },      // gris polvo      — Final 0: moriste
+  { hex: '#E8E4F0', final: 1 },      // blanco          — Final 1: Salida raspando
+  { hex: '#C79A45', final: 2 },      // cobre           — Final 2: La dueña de la veta
+  { hex: '#4CE0D2', final: 3 },      // turquesa        — Final 3: Salimos todas
+  { hex: '#E86A5A', final: 4 },      // coral           — Final 4: Cosas de Minas
+];
+// ¿Esta desbloqueado el color i, dada la lista de finales vistos? El default
+// siempre; el resto, si su final esta en la lista.
+export const cascoDesbloqueado = (i, vistos) =>
+  CASCOS[i].final === null || vistos.includes(CASCOS[i].final);
+// Indice del casco elegido, clampeado a algo realmente desbloqueado: si el save
+// quedo inconsistente (o apunta a un color que aun no se gano), cae al default.
+export function leerCascoElegido(vistos){
+  const i = almacen.leer('gc2.casco', 0);
+  return (Number.isInteger(i) && i >= 0 && i < CASCOS.length && cascoDesbloqueado(i, vistos)) ? i : 0;
+}
+export const guardarCascoElegido = i => almacen.escribir('gc2.casco', i);
+
 // Velocidad del carrito en u/s a los t segundos de partida (§6)
 export function velocidadEn(t){
   const p = clamp(t / CONFIG.duracion, 0, 1);

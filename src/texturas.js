@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { lerp, rngCon } from './config.js';
+import { lerp, rngCon, CASCOS } from './config.js';
 
 /* ===========================================================================
    TextureGen — §13. Atlas procedural 256x256 de tiles 64x64, generado una sola
@@ -34,6 +34,14 @@ const TextureGen = (() => {
   ctx.imageSmoothingEnabled = false;
 
   const rnd = rngCon(0xC0FFEE);
+  let atlasTex = null;   // la textura del atlas, para repintar el casco en vivo
+
+  // Repinta el tile del casco con un color nuevo y avisa a la GPU. El atlas es
+  // compartido, asi que cambia el casco de todas las mineras a la vez.
+  function recolorarCasco(hex){
+    pintarCasco(hex);
+    if (atlasTex) atlasTex.needsUpdate = true;
+  }
 
   // --- ruido de valor con octavas, sobre una grilla gruesa interpolada ---
   function campoRuido(lado, celdas, octavas){
@@ -109,6 +117,30 @@ const TextureGen = (() => {
   }
 
   const PALETA_CSS = i => `rgb(${PALETA[i][0]},${PALETA[i][1]},${PALETA[i][2]})`;
+
+  // Casco: el color se elige en el titulo, asi que la pintura del tile vive en
+  // su propia funcion y se puede repintar despues de generado el atlas.
+  const CASCO_DEFAULT = CASCOS[0].hex;   // única fuente del default: la tabla de config
+  // Sombra de la visera/nervaduras: un tono mas oscuro del color base. El §13
+  // la tenia fija en PALETA[11] (la sombra del amarillo); derivarla del color
+  // hace que cualquier casco traiga su propia sombra sin una tabla aparte.
+  // ponytail: multiplicar por 0.72 no clona exacto el #C79A45 original, pero la
+  // visera son 14 px con NearestFilter: la diferencia no se ve.
+  function sombra(hex){
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return `rgb(${(r*0.72)|0},${(g*0.72)|0},${(b*0.72)|0})`;
+  }
+  function pintarCasco(hex){
+    pintar(TX.CASCO, c => {
+      const som = sombra(hex);
+      c.fillStyle = hex;            c.fillRect(0,0,TILE,TILE);
+      c.fillStyle = som;            c.fillRect(0,TILE-14,TILE,14);   // visera
+      c.fillStyle = PALETA_CSS(15); c.fillRect(24,TILE-12,16,10);    // lampara
+      c.fillStyle = som;
+      for (let x = 6; x < TILE; x += 20) c.fillRect(x, 4, 3, TILE-20); // nervaduras
+    });
+  }
 
   function generar(){
     ctx.fillStyle = PALETA_CSS(0);
@@ -304,14 +336,9 @@ const TextureGen = (() => {
       });
     });
 
-    // Casco: amarillo luz + la lampara. Cuarta cara (Tuca) en el cuadrante 4.
-    pintar(TX.CASCO, c => {
-      c.fillStyle = PALETA_CSS(10); c.fillRect(0,0,TILE,TILE);
-      c.fillStyle = PALETA_CSS(11); c.fillRect(0,TILE-14,TILE,14);   // visera
-      c.fillStyle = PALETA_CSS(15); c.fillRect(24,TILE-12,16,10);    // lampara
-      c.fillStyle = PALETA_CSS(11);
-      for (let x = 6; x < TILE; x += 20) c.fillRect(x, 4, 3, TILE-20); // nervaduras
-    });
+    // Casco: color base + visera + lampara. El color se puede cambiar despues
+    // con recolorarCasco(); aca se pinta con el default.
+    pintarCasco(CASCO_DEFAULT);
 
     // Desvio: flecha en el riel. Se rota por instancia segun el lado.
     pintar(TX.DESVIO, c => {
@@ -323,7 +350,8 @@ const TextureGen = (() => {
       c.fillStyle = PALETA_CSS(11); c.fillRect(8,26,30,3);
     });
 
-    const tex = new THREE.CanvasTexture(cv);
+    atlasTex = new THREE.CanvasTexture(cv);
+    const tex = atlasTex;
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;
     tex.generateMipmaps = false;
@@ -362,7 +390,7 @@ const TextureGen = (() => {
     c.drawImage(cv, ox + (idx % 4) * 16, oy + ((idx/4)|0) * 16, 16, 16, 0, 0, lado, lado);
   }
 
-  return { generar, uv, recorte, recorteCara, canvas: cv, PALETA_CSS };
+  return { generar, recolorarCasco, uv, recorte, recorteCara, canvas: cv, PALETA_CSS };
 })();
 
 export { TextureGen, TX, PALETA, ATLAS_LADO, TILE };
