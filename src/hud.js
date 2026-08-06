@@ -283,13 +283,22 @@ export const HUD = {
       b.className = 'swatch';
       if (cascoDesbloqueado(i, vistos)){
         b.style.background = c.hex;
-        b.setAttribute('aria-label', c.hex);
-        if (i === elegido) b.classList.add('sel');
+        // El hex a secas no le dice nada a un lector de pantalla: lo contextualizo
+        // con la etiqueta localizada del selector. El estado elegido va por
+        // aria-pressed, no solo por la clase CSS .sel.
+        b.setAttribute('aria-label', `${t('titulo.casco')}: ${c.hex}`);
+        const sel = i === elegido;
+        b.classList.toggle('sel', sel);
+        b.setAttribute('aria-pressed', sel);
         b.onclick = () => {
           Sfx.ui(true);
           TextureGen.recolorarCasco(c.hex);
           guardarCascoElegido(i);
-          cont.querySelectorAll('.swatch').forEach((s, j) => s.classList.toggle('sel', j === i));
+          cont.querySelectorAll('.swatch').forEach((s, j) => {
+            const on = j === i;
+            s.classList.toggle('sel', on);
+            s.setAttribute('aria-pressed', on);
+          });
         };
       } else {
         b.classList.add('trabado');
