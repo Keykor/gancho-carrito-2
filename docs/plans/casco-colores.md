@@ -26,7 +26,8 @@ recuerda entre partidas.
 ## Enfoque y por qué
 
 El color del casco está horneado en el tile `TX.CASCO` del atlas procedural
-([texturas.js:308](../../src/texturas.js)), un canvas 256×256 que **comparten
+(`pintarCasco`/`recolorarCasco` en [texturas.js](../../src/texturas.js)), un
+canvas 256×256 que **comparten
 todas las mineras**. Por eso **repintar ese tile cambia el casco de todas a la
 vez** — que es lo que se quiere.
 
