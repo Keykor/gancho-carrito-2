@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { lerp, rngCon } from './config.js';
+import { lerp, rngCon, CASCOS } from './config.js';
 
 /* ===========================================================================
    TextureGen — §13. Atlas procedural 256x256 de tiles 64x64, generado una sola
@@ -120,7 +120,7 @@ const TextureGen = (() => {
 
   // Casco: el color se elige en el titulo, asi que la pintura del tile vive en
   // su propia funcion y se puede repintar despues de generado el atlas.
-  const CASCO_DEFAULT = '#FFD166';   // = PALETA[10], el amarillo de siempre
+  const CASCO_DEFAULT = CASCOS[0].hex;   // única fuente del default: la tabla de config
   // Sombra de la visera/nervaduras: un tono mas oscuro del color base. El §13
   // la tenia fija en PALETA[11] (la sombra del amarillo); derivarla del color
   // hace que cualquier casco traiga su propia sombra sin una tabla aparte.
