@@ -15,6 +15,8 @@ es: {
   'titulo.opciones'        : 'Sonido',
   'titulo.record'          : 'Mejor puntaje: {n}',
   'titulo.sinRecord'       : 'Todavía no bajó nadie',
+  'titulo.casco'           : 'Color del casco',
+  'titulo.cascoTrabado'    : 'Se desbloquea con un final',
 
   'ayuda.titulo'           : 'Guía',
   'ayuda.intro'            : 'Hay una sola acción en todo el juego: lanzar el gancho.',
@@ -133,6 +135,8 @@ en: {
   'titulo.opciones'        : 'Sound',
   'titulo.record'          : 'Best score: {n}',
   'titulo.sinRecord'       : 'Nobody has gone down yet',
+  'titulo.casco'           : 'Helmet color',
+  'titulo.cascoTrabado'    : 'Unlocked with an ending',
 
   'ayuda.titulo'           : 'Guide',
   'ayuda.intro'            : 'There is one action in the whole game: throwing the hook.',
